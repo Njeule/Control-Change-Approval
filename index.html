@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Control Change Approval</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --panel:#121a2b;
+      --panel2:#0f1a2e;
+      --border:#22304d;
+      --text:#e8eefc;
+      --muted:#9fb0d9;
+      --muted2:#cdd8f6;
+      --good:#2e7d32;
+      --bad:#c62828;
+      --warn:#f6c343;
+      --link:#79b8ff;
+      --shadow:0 10px 30px rgba(0,0,0,.35);
+      --radius:14px;
+      --radius2:10px;
+      --pad:18px;
+      --font: Arial, Helvetica, sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:var(--font);
+      background:var(--bg);
+      color:var(--text);
+      padding:24px;
+    }
+    .wrap{ max-width:1100px; margin:0 auto; }
+    .header{
+      display:flex; align-items:flex-start; justify-content:space-between;
+      gap:16px; margin-bottom:16px;
+    }
+    .title h1{ margin:0 0 6px; font-size:22px; letter-spacing:.2px; }
+    .title p{ margin:0; color:var(--muted); line-height:1.4; font-size:13px; }
+    .card{
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:var(--pad);
+      margin-bottom:16px;
+    }
+    .grid{ display:grid; grid-template-columns: 1fr; gap:12px; }
+    @media(min-width:900px){
+      .grid.cols2{ grid-template-columns: 1fr 1fr; }
+      .grid.cols3{ grid-template-columns: 1fr 1fr 1fr; }
+    }
+    label{ display:block; font-size:12px; color:var(--muted2); margin:0 0 6px; }
+    input, select, textarea{
+      width:100%;
+      border:1px solid var(--border);
+      background:var(--panel2);
+      color:var(--text);
+      border-radius:10px;
+      padding:10px 12px;
+      outline:none;
+      font-size:14px;
+    }
+    textarea{ min-height:110px; resize:vertical; }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .btn{
+      border:1px solid var(--border);
+      background:#172241;
+      color:var(--text);
+      padding:10px 14px;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:700;
+      font-size:13px;
+    }
+    .btn:disabled{ opacity:.55; cursor:not-allowed; }
+    .btn.good{ background:rgba(46,125,50,.25); border-color:rgba(46,125,50,.6); }
+    .btn.bad{ background:rgba(198,40,40,.22); border-color:rgba(198,40,40,.6); }
+    .btn.ghost{ background:transparent; }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.03);
+      font-size:12px;
+      color:var(--muted2);
+      white-space:nowrap;
+    }
+    .pill.good{ border-color:rgba(46,125,50,.7); color:#b9f6ca; }
+    .pill.bad{ border-color:rgba(198,40,40,.7); color:#ffb4b4; }
+    .pill.warn{ border-color:rgba(246,195,67,.65); color:#ffe8a3; }
+    .hr{ height:1px; background:var(--border); margin:14px 0; }
+    .kv{
+      display:grid;
+      grid-template-columns: 160px 1fr;
+      gap:8px 14px;
+      align-items:start;
+      font-size:14px;
+    }
+    .k{ color:var(--muted2); font-weight:700; font-size:12px; padding-top:2px; }
+    .v{ color:var(--text); }
+    .muted{ color:var(--muted); font-size:12px; line-height:1.4; }
+    .notice{
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.03);
+      border-radius:12px;
+      padding:10px 12px;
+      color:var(--muted2);
+      font-size:13px;
+      line-height:1.4;
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      overflow:hidden;
+      border:1px solid var(--border);
+      border-radius:12px;
+    }
+    th, td{
+      padding:10px 12px;
+      border-bottom:1px solid var(--border);
+      text-align:left;
+      vertical-align:top;
+      font-size:13px;
+    }
+    th{
+      background:rgba(255,255,255,.04);
+      color:var(--muted2);
+      font-weight:800;
+      font-size:12px;
+    }
+    tr:last-child td{ border-bottom:none; }
+    a{ color:var(--link); text-decoration:none; }
+    a:hover{ text-decoration:underline; }
+    .hide{ display:none !important; }
+    .right{ margin-left:auto; }
+    .mini{ font-size:11px; color:var(--muted); }
+    .error{
+      border-color: rgba(198,40,40,.7) !important;
+      box-shadow: 0 0 0 3px rgba(198,40,40,.15);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="header">
+      <div class="title">
+        <h1>Control Change Approval</h1>
+        <p>Search for a change request, review the proposed updates and evidence, then approve or reject with a mandatory comment.</p>
+      </div>
+      <div class="row">
+        <span id="statusPill" class="pill warn">Ready</span>
+      </div>
+    </div>
+
+    <!-- SEARCH -->
+    <div class="card" id="searchCard">
+      <div class="row" style="margin-bottom:10px;">
+        <span class="pill">Search</span>
+        <span class="mini">Paste a Change ID from the email, or search by control / owner / status.</span>
+      </div>
+
+      <div class="grid cols3">
+        <div>
+          <label for="q_change_id">Change ID</label>
+          <input id="q_change_id" placeholder="e.g., chg_..." />
+        </div>
+        <div>
+          <label for="q_control_id">Control ID</label>
+          <input id="q_control_id" placeholder="e.g., ISO27001-A5-01" />
+        </div>
+        <div>
+          <label for="q_owner_name">Owner name</label>
+          <input id="q_owner_name" placeholder="e.g., Jane Doe" />
+        </div>
+      </div>
+
+      <div class="grid cols3" style="margin-top:10px;">
+        <div>
+          <label for="q_approval_status">Approval status</label>
+          <select id="q_approval_status">
+            <option value="">Any</option>
+            <option value="PENDING">PENDING</option>
+            <option value="APPROVED">APPROVED</option>
+            <option value="REJECTED">REJECTED</option>
+          </select>
+        </div>
+        <div>
+          <label for="q_any">Any field (free text)</label>
+          <input id="q_any" placeholder="Matches change reason / owner email / etc." />
+        </div>
+        <div class="row" style="align-items:flex-end;">
+          <button class="btn" id="btnSearch">Search</button>
+          <button class="btn ghost" id="btnClear">Clear</button>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+      <div id="searchResults" class="notice">No results yet.</div>
+    </div>
+
+    <!-- DETAILS -->
+    <div class="card hide" id="detailsCard">
+      <div class="row" style="margin-bottom:10px;">
+        <span class="pill">Change details</span>
+        <span id="detailsPill" class="pill warn">—</span>
+        <button class="btn ghost right" id="btnBackToSearch">Back to search</button>
+      </div>
+
+      <div class="grid cols2">
+        <div class="notice">
+          <div class="kv">
+            <div class="k">Control ID</div><div class="v" id="d_control_id">—</div>
+            <div class="k">Change ID</div><div class="v" id="d_change_id">—</div>
+            <div class="k">Change timestamp</div><div class="v" id="d_change_timestamp">—</div>
+            <div class="k">Owner</div><div class="v" id="d_owner">—</div>
+            <div class="k">Approval status</div><div class="v" id="d_approval_status">—</div>
+            <div class="k">Proposed version</div><div class="v" id="d_version">—</div>
+          </div>
+        </div>
+
+        <div class="notice">
+          <div class="k" style="margin-bottom:6px;">Reason for change</div>
+          <div class="v" id="d_change_reason" style="white-space:pre-wrap;">—</div>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="row" style="margin-bottom:10px;">
+        <span class="pill">Proposed changes</span>
+      </div>
+
+      <div id="changesWrap">
+        <table aria-label="Proposed changes table">
+          <thead>
+            <tr>
+              <th style="width:28%;">Field</th>
+              <th style="width:36%;">Old value</th>
+              <th style="width:36%;">New value</th>
+            </tr>
+          </thead>
+          <tbody id="changesTbody">
+            <tr><td colspan="3" class="muted">No proposed changes found.</td></tr>
+          </tbody>
+        </table>
+        <div class="muted" id="changesCount" style="margin-top:8px;"></div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="row" style="margin-bottom:10px;">
+        <span class="pill">Evidence</span>
+      </div>
+
+      <div class="notice" id="evidenceBox">
+        <div class="kv">
+          <div class="k">Evidence link</div><div class="v" id="d_evidence_link">—</div>
+          <div class="k">Evidence file ID</div><div class="v" id="d_evidence_file_id">—</div>
+          <div class="k">Evidence file URL</div><div class="v" id="d_evidence_file_url">—</div>
+          <div class="k">Evidence file name</div><div class="v" id="d_evidence_file_name">—</div>
+        </div>
+        <div class="muted" style="margin-top:10px;">
+          If evidence is missing, request the owner to attach the correct file/link and resubmit.
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <!-- DECISION -->
+      <div class="row" style="margin-bottom:10px;">
+        <span class="pill">Decision</span>
+        <span class="mini">Approver comment is required for both approve and reject.</span>
+      </div>
+
+      <div class="grid cols2">
+        <div>
+          <label for="approver_comment">Approver comment (required)</label>
+          <textarea id="approver_comment" placeholder="Explain your decision and any conditions / follow-ups required." required></textarea>
+          <div class="muted">This comment will be logged as the decision note.</div>
+        </div>
+        <div>
+          <div class="notice">
+            <div class="k" style="margin-bottom:8px;">Actions</div>
+            <div class="row">
+              <button class="btn good" id="btnApprove">✅ Approve</button>
+              <button class="btn bad" id="btnReject">❌ Reject</button>
+            </div>
+            <div class="muted" style="margin-top:10px;">
+              Once decided, the request becomes idempotent (re-clicking won’t change the outcome).
+            </div>
+            <div class="hr"></div>
+            <div id="decisionResult" class="muted">No decision submitted yet.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const DECISION_ENDPOINT = "https://micahnjeule.app.n8n.cloud/webhook/ed400d02-45e1-4eab-9da0-7c4f3ab78860";
+const SEARCH_ENDPOINT = "https://micahnjeule.app.n8n.cloud/webhook/control/change/search";
+
+/** -------- Helpers -------- */
+const $ = (id) => document.getElementById(id);
+
+function escHtml(s){
+  return String(s ?? "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#39;");
+}
+function isEmpty(v){ return (v ?? "").toString().trim() === ""; }
+
+function setPill(el, kind, text){
+  el.classList.remove("good","bad","warn");
+  el.classList.add(kind);
+  el.textContent = text;
+}
+
+function parseJsonSafe(v){
+  try{
+    if (!v) return {};
+    if (typeof v === "object") return v;
+    return JSON.parse(String(v));
+  }catch(e){
+    return {};
+  }
+}
+
+function buildProposedRows(oldJson, newJson){
+  const oldObj = parseJsonSafe(oldJson);
+  const newObj = parseJsonSafe(newJson);
+  const keys = Array.from(new Set([
+    ...Object.keys(oldObj || {}),
+    ...Object.keys(newObj || {})
+  ])).sort();
+
+  return keys.map(k => ({
+    field: k,
+    old_value: (oldObj?.[k] ?? ""),
+    new_value: (newObj?.[k] ?? "")
+  }));
+}
+
+function normalizeStatus(s){
+  return (s ?? "").toString().trim().toUpperCase();
+}
+
+function prettyLink(url){
+  if (!url) return "—";
+  const safe = String(url);
+  return `<a href="${escHtml(safe)}" target="_blank" rel="noopener noreferrer">${escHtml(safe)}</a>`;
+}
+
+function setText(id, v){ $(id).textContent = (v ?? "—") || "—"; }
+function setHtml(id, html){ $(id).innerHTML = html; }
+
+function showDetails(){
+  $("searchCard").classList.add("hide");
+  $("detailsCard").classList.remove("hide");
+}
+function showSearch(){
+  $("detailsCard").classList.add("hide");
+  $("searchCard").classList.remove("hide");
+}
+
+/** -------- State -------- */
+let currentChange = null;
+
+/** -------- Render functions -------- */
+function renderSearchResults(list){
+  if (!Array.isArray(list) || list.length === 0){
+    $("searchResults").innerHTML = "No matches found.";
+    return;
+  }
+
+  const rows = list.slice(0, 25).map(r => {
+    const changeId = escHtml(r.change_id || "");
+    const controlId = escHtml(r.control_id || "");
+    const owner = escHtml(r.owner_name || r.owner_email || "");
+    const status = escHtml(normalizeStatus(r.approval_status || "PENDING"));
+    const reason = escHtml((r.change_reason || "").toString().slice(0, 140));
+    return `
+      <div style="padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.03);margin-top:10px;">
+        <div class="row">
+          <span class="pill">${status}</span>
+          <div style="font-weight:800;">${controlId || "—"}</div>
+          <div class="muted">Change: ${changeId || "—"}</div>
+          <button class="btn right" data-open="${changeId}">Open</button>
+        </div>
+        <div class="muted" style="margin-top:6px;">
+          Owner: ${owner || "—"} · ${reason || ""}
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  $("searchResults").innerHTML =
+    `<div class="muted">Matches: ${list.length}. Showing up to 25.</div>` + rows;
+
+  document.querySelectorAll("[data-open]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const changeId = btn.getAttribute("data-open");
+      if (changeId) await loadChangeById(changeId);
+    });
+  });
+}
+
+function renderChangeDetails(change){
+  currentChange = change;
+
+  const status = normalizeStatus(change.approval_status || "PENDING");
+  if (status === "APPROVED") setPill($("detailsPill"), "good", "APPROVED");
+  else if (status === "REJECTED") setPill($("detailsPill"), "bad", "REJECTED");
+  else setPill($("detailsPill"), "warn", "PENDING");
+
+  setText("d_control_id", change.control_id || "—");
+  setText("d_change_id", change.change_id || "—");
+  setText("d_change_timestamp", change.change_timestamp || "—");
+
+  const owner = (change.owner_name ? change.owner_name : "—") +
+                (change.owner_email ? ` (${change.owner_email})` : "");
+  setText("d_owner", owner);
+
+  setText("d_approval_status", status);
+  const version = `${change.version_before || "—"} → ${change.version_after || "—"} (${change.version_status || "—"})`;
+  setText("d_version", version);
+
+  $("d_change_reason").textContent = (change.change_reason || "—");
+
+  const proposedRows =
+    Array.isArray(change.proposed_change_rows) && change.proposed_change_rows.length
+      ? change.proposed_change_rows
+      : buildProposedRows(change.old_values_json, change.new_values_json);
+
+  const tbody = $("changesTbody");
+  if (!proposedRows.length){
+    tbody.innerHTML = `<tr><td colspan="3" class="muted">No proposed changes found.</td></tr>`;
+    $("changesCount").textContent = "";
+  } else {
+    tbody.innerHTML = proposedRows.map(r => `
+      <tr>
+        <td style="font-weight:800;white-space:nowrap;">${escHtml(r.field)}</td>
+        <td style="color:var(--muted2);">${escHtml(r.old_value) || '<span class="muted">—</span>'}</td>
+        <td>${escHtml(r.new_value) || '<span class="muted">—</span>'}</td>
+      </tr>
+    `).join("");
+    $("changesCount").textContent = `Proposed fields changed: ${proposedRows.length}`;
+  }
+
+  const evidenceLink = change.evidence_link || "";
+  const evidenceFileId = change.evidence_file_id || "";
+  const evidenceFileUrl = change.evidence_file_url || "";
+  const evidenceFileName = change.evidence_file_name || "";
+
+  setHtml("d_evidence_link", evidenceLink ? prettyLink(evidenceLink) : "—");
+  setText("d_evidence_file_id", evidenceFileId || "—");
+  setHtml("d_evidence_file_url", evidenceFileUrl ? prettyLink(evidenceFileUrl) : "—");
+  setText("d_evidence_file_name", evidenceFileName || "—");
+
+  const decided = (status !== "PENDING");
+  $("btnApprove").disabled = decided;
+  $("btnReject").disabled = decided;
+
+  $("decisionResult").textContent = decided
+    ? "This change is already decided. No further action is required."
+    : "Ready for your decision.";
+}
+
+/** -------- API calls -------- */
+async function apiSearch(payload){
+  const res = await fetch(SEARCH_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type":"application/json" },
+    body: JSON.stringify(payload),
+    credentials: "omit",
+  });
+
+  const ct = (res.headers.get("content-type") || "").toLowerCase();
+  if (ct.includes("application/json")) return await res.json();
+  const text = await res.text();
+  throw new Error(text || ("Search failed: HTTP " + res.status));
+}
+
+async function apiDecision({ change_id, action, approver_comment }){
+  const url = new URL(DECISION_ENDPOINT);
+  url.searchParams.set("change_id", change_id);
+  url.searchParams.set("action", action);
+
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    headers: { "Content-Type":"application/json" },
+    body: JSON.stringify({ approver_comment }),
+    credentials: "omit",
+  });
+
+  const ct = (res.headers.get("content-type") || "").toLowerCase();
+  if (ct.includes("application/json")) return await res.json();
+  return { ok: res.ok, html: await res.text(), status: res.status };
+}
+
+async function loadChangeById(changeId){
+  setPill($("statusPill"), "warn", "Loading…");
+  $("searchResults").innerHTML = "Loading…";
+
+  try{
+    const out = await apiSearch({ mode:"search", change_id: changeId });
+
+    const match =
+      out?.match ||
+      (Array.isArray(out?.matches) ? out.matches[0] : null) ||
+      (Array.isArray(out?.data) ? out.data[0] : null);
+
+    if (!match){
+      setPill($("statusPill"), "bad", "Not found");
+      $("searchResults").innerHTML = "No matching change_id found.";
+      return;
+    }
+
+    renderChangeDetails(match);
+    showDetails();
+    setPill($("statusPill"), "good", "Loaded");
+
+  }catch(e){
+    setPill($("statusPill"), "bad", "Error");
+    $("searchResults").textContent = "Search failed.";
+    console.error(e);
+  }
+}
+
+async function runSearch(){
+  const payload = {
+    mode: "search",
+    change_id: $("q_change_id").value.trim(),
+    control_id: $("q_control_id").value.trim(),
+    owner_name: $("q_owner_name").value.trim(),
+    approval_status: $("q_approval_status").value.trim(),
+    any: $("q_any").value.trim(),
+  };
+
+  const values = Object.entries(payload).filter(([k]) => k !== "mode").map(([,v]) => v);
+  if (values.every(v => isEmpty(v))){
+    $("searchResults").textContent = "Enter at least one search value.";
+    return;
+  }
+
+  setPill($("statusPill"), "warn", "Searching…");
+  $("searchResults").textContent = "Searching…";
+
+  try{
+    const out = await apiSearch(payload);
+    const matches = out?.matches || out?.data || [];
+    renderSearchResults(matches);
+    setPill($("statusPill"), "good", "Search ready");
+  }catch(e){
+    setPill($("statusPill"), "bad", "Error");
+    $("searchResults").textContent = "Search failed.";
+    console.error(e);
+  }
+}
+
+/** -------- Decision actions -------- */
+function validateComment(){
+  const ta = $("approver_comment");
+  const ok = !isEmpty(ta.value);
+  ta.classList.toggle("error", !ok);
+  return ok;
+}
+
+async function submitDecision(action){
+  if (!currentChange?.change_id){
+    $("decisionResult").textContent = "No change loaded.";
+    return;
+  }
+  if (!validateComment()){
+    $("decisionResult").textContent = "Approver comment is required.";
+    return;
+  }
+
+  const changeId = currentChange.change_id;
+  const comment = $("approver_comment").value.trim();
+
+  $("btnApprove").disabled = true;
+  $("btnReject").disabled = true;
+  $("decisionResult").textContent = "Submitting decision…";
+  setPill($("statusPill"), "warn", "Submitting…");
+
+  try{
+    const out = await apiDecision({ change_id: changeId, action, approver_comment: comment });
+
+    if (out && out.html){
+      $("decisionResult").textContent =
+        (out.ok ? "Decision submitted successfully." : "Decision failed.") +
+        " You may close this page.";
+    } else {
+      $("decisionResult").textContent =
+        (out?.message || (out?.ok ? "Decision submitted successfully." : "Decision failed."));
+    }
+
+    await loadChangeById(changeId);
+    setPill($("statusPill"), out?.ok === false ? "bad" : "good", "Done");
+
+  }catch(e){
+    $("decisionResult").textContent = "Decision failed.";
+    setPill($("statusPill"), "bad", "Error");
+    console.error(e);
+    $("btnApprove").disabled = false;
+    $("btnReject").disabled = false;
+  }
+}
+
+/** -------- Wire up UI -------- */
+$("btnSearch").addEventListener("click", runSearch);
+$("btnClear").addEventListener("click", () => {
+  ["q_change_id","q_control_id","q_owner_name","q_any"].forEach(id => $(id).value = "");
+  $("q_approval_status").value = "";
+  $("searchResults").textContent = "No results yet.";
+});
+$("btnBackToSearch").addEventListener("click", () => showSearch());
+$("btnApprove").addEventListener("click", () => submitDecision("approve"));
+$("btnReject").addEventListener("click", () => submitDecision("reject"));
+$("approver_comment").addEventListener("input", validateComment);
+
+// Auto-load by URL param (from email)
+(function init(){
+  const p = new URLSearchParams(window.location.search);
+  const changeId = (p.get("change_id") || "").trim();
+  if (changeId){
+    loadChangeById(changeId);
+  }
+})();
+</script>
+</body>
+</html>
